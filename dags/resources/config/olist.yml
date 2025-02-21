@@ -1,0 +1,23 @@
+ingestion:
+  olist_orders_dataset:
+    source: "olist_orders_dataset.csv"
+  olist_customers_dataset:
+    source: "olist_customers_dataset.csv"
+  olist_sellers_dataset:
+    source: "olist_sellers_dataset.csv"
+  olist_order_payments_dataset:
+    source: "olist_order_payments_dataset.csv"
+  olist_order_items_dataset:
+    source: "olist_order_items_dataset.csv"
+  olist_products_dataset:
+    source: "olist_products_dataset.csv"
+  product_category_name_translation:
+    source: "product_category_name_translation.csv"
+
+transform:
+  - resources/sql/silver/customers.sql
+  - resources/sql/silver/products.sql
+  - resources/sql/silver/order.sql
+  - resources/sql/silver/payments.sql
+  - resources/sql/silver/sellers.sql
+  - resources/sql/gold/transaction.sql

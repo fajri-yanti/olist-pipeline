@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  postgres_airflow_olist:
+    image: postgres:14
+    container_name: postgres_airflow_olist
+    restart: always
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5438:5432"
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+
+  postgres_olist_db:
+    image: postgres:14
+    container_name: postgres_olist_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: olist
+    ports:
+      - "5437:5432"
+    volumes:
+      - pg_olist_data:/var/lib/postgresql/data
+    command: postgres
+      
+
+  airflow_init_olist:
+    image: apache/airflow:2.7.0
+    container_name: airflow_init_olist
+    depends_on:
+      - postgres_airflow_olist
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_airflow_olist/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=my_secret_key_123
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      airflow db init &&
+      airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+
+  airflow_webserver_olist:
+    image: apache/airflow:2.7.0
+    container_name: airflow_webserver_olist
+    restart: always
+    depends_on:
+      - airflow_init_olist
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_airflow_olist/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=my_secret_key_123
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+    ports:
+      - "8084:8080"
+    command: webserver
+
+  airflow_scheduler_olist:
+    image: apache/airflow:2.7.0
+    container_name: airflow_scheduler_olist
+    restart: always
+    depends_on:
+      - airflow_webserver_olist
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_airflow_olist/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=my_secret_key_123
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+    command: scheduler
+
+  metabase:
+    image: metabase/metabase
+    container_name: metabase_olist
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: olist_db
+      MB_DB_PORT: 5432
+      MB_DB_USER: postgres
+      MB_DB_PASS: password
+      MB_DB_HOST: postgres_olist_db
+
+volumes:
+  airflow_db_data:
+  pg_olist_data:
